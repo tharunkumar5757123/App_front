@@ -1,0 +1,56 @@
+/* login */
+
+
+.glass-card input::placeholder {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.btn-light {
+  background: linear-gradient(90deg, #ffd700, #ff9800);
+  color: #000;
+  font-weight: 600;
+  transition: all 0.3s ease-in-out;
+}
+
+.btn-light:hover {
+  background: linear-gradient(90deg, #ffcc00, #ff6600);
+  transform: scale(1.03);
+}
+
+
+
+/* Register */
+
+.glass-card {
+  animation: fadeInUp 0.8s ease-in-out;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+.glass-card:hover {
+  transform: scale(1.02);
+  transition: transform 0.3s ease;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(25px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
+/* event details */
+
+.event-details-page section {
+  scroll-margin-top: 80px;
+}
+
+@media (max-width: 768px) {
+  .event-details-page h1 {
+    font-size: 2rem;
+  }
+}
