@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { QrReader } from "react-qr-reader";
+import QrScanner from 'react-qr-scanner';
 import API from "../api/api";
 import { useSelector } from "react-redux";
 import AlertBox from "./AlertBox";
@@ -96,7 +96,7 @@ const QRScanner = () => {
         }}
       >
         {isScanning ? (
-          <QrReader
+          <QrScanner
             onResult={(result, error) => {
               if (result) handleScan(result?.text);
               if (error) handleError(error);
