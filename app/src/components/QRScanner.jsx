@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import QrScanner from 'react-qr-scanner';
+import React, { useState, useEffect, useRef } from "react";
+import { Html5QrcodeScanner } from "html5-qrcode";
 import API from "../api/api";
 import { useSelector } from "react-redux";
 import AlertBox from "./AlertBox";
@@ -12,6 +12,7 @@ const QRScanner = () => {
   const [isScanning, setIsScanning] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const { userInfo } = useSelector((state) => state.auth);
+  const scannerRef = useRef(null);
 
   // ✅ Restrict access to hosts only
   if (!userInfo || userInfo.role !== "host") {
@@ -23,46 +24,59 @@ const QRScanner = () => {
     );
   }
 
-  const handleScan = async (data) => {
-    if (!data || data === scanResult || isProcessing) return;
+  // 🔧 Setup scanner on start
+  useEffect(() => {
+    if (isScanning) {
+      const scanner = new Html5QrcodeScanner("reader", {
+        fps: 10,
+        qrbox: 250,
+      });
 
-    setIsProcessing(true);
-    setScanResult(data);
-    setStatus("⏳ Verifying ticket...");
-    setTicketInfo(null);
+      scanner.render(
+        async (decodedText) => {
+          if (!decodedText || isProcessing) return;
+          setIsProcessing(true);
+          setScanResult(decodedText);
+          setStatus("⏳ Verifying ticket...");
+          setTicketInfo(null);
 
-    try {
-      console.log("🔍 Scanning ticket:", data);
+          try {
+            const parts = decodedText.split("-");
+            const ticketId = parts.length >= 2 ? parts[1] : decodedText;
 
-      // 🧩 Extract ticketId from combined QR code (eventId-ticketId-timestamp)
-      const parts = data.split("-");
-      const ticketId = parts.length >= 2 ? parts[1] : data;
+            const config = {
+              headers: { Authorization: `Bearer ${userInfo.token}` },
+            };
 
-      console.log("🎫 Extracted ticketId:", ticketId);
+            const res = await API.post("/tickets/scan", { ticketId }, config);
 
-      const config = {
-        headers: { Authorization: `Bearer ${userInfo.token}` },
+            setStatus("✅ Ticket scanned successfully!");
+            setTicketInfo(res.data.ticket);
+          } catch (err) {
+            setStatus(
+              `❌ Scan failed: ${
+                err.response?.data?.message || err.message
+              }`
+            );
+          } finally {
+            setTimeout(() => {
+              setScanResult(null);
+              setIsProcessing(false);
+            }, 3000);
+          }
+        },
+        (err) => {
+          console.warn("QR Scan Error:", err);
+        }
+      );
+
+      scannerRef.current = scanner;
+
+      return () => {
+        scanner.clear();
       };
-
-      const res = await API.post("/tickets/scan", { ticketId }, config);
-
-      setStatus("✅ Ticket scanned successfully!");
-      setTicketInfo(res.data.ticket);
-    } catch (err) {
-      console.error("❌ Scan error:", err.response?.data || err.message);
-      setStatus(`❌ Scan failed: ${err.response?.data?.message || err.message}`);
-    } finally {
-      setTimeout(() => {
-        setScanResult(null);
-        setIsProcessing(false);
-      }, 3000);
     }
-  };
-
-  const handleError = (err) => {
-    console.error("QR Scan Error:", err);
-    setStatus("❌ Camera access error. Please allow permissions or refresh.");
-  };
+  }, [isScanning]);
 
   return (
     <div className="container mt-4 text-center">
@@ -96,14 +110,7 @@ const QRScanner = () => {
         }}
       >
         {isScanning ? (
-          <QrScanner
-            onResult={(result, error) => {
-              if (result) handleScan(result?.text);
-              if (error) handleError(error);
-            }}
-            constraints={{ facingMode: "environment" }}
-            style={{ width: "100%" }}
-          />
+          <div id="reader" style={{ width: "100%" }}></div>
         ) : (
           <div className="p-5 text-muted">Camera paused</div>
         )}
@@ -178,7 +185,6 @@ const QRScanner = () => {
         </Card>
       )}
 
-      {/* Inline Styles */}
       <style>{`
         @keyframes scanMove {
           0% { top: 5%; }
